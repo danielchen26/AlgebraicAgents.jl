@@ -51,7 +51,7 @@ end
 
 """
     @filter query
-Turnfilter query into a function of agents' hierarchy.
+Turn a filter query into a function of agents' hierarchy.
 Accepts expressions (corresponding to q-strings) and query string.
 
 See also [`FilterQuery`](@ref).
@@ -85,7 +85,7 @@ function Base.filter(a::AbstractAlgebraicAgent, queries::Vararg{<:FilterQuery})
 end
 
 function Base.filter(a::Vector{<:AbstractAlgebraicAgent},
-                     queries::Vararg{<:FilterQuery})
+    queries::Vararg{<:FilterQuery})
     filtered = AbstractAlgebraicAgent[]
     for a in a
         all(q -> _filter(a, q), queries) && push!(filtered, a)
@@ -120,13 +120,14 @@ agent |> @transform(name=_.name)
 agent |> @transform(name=_.name, _.age)
 ```
 """
-struct TransformQuery
+struct TransformQuery{F <: Function} <: AbstractQuery
     name::Symbol
-    query::Function
+    query::F
 
     function TransformQuery(name::T,
-                            query::Function) where {T <: Union{Symbol, AbstractString}}
-        new(Symbol(name), query)
+        query::F) where {T <: Union{Symbol, AbstractString},
+        F <: Function}
+        new{F}(Symbol(name), query)
     end
 end
 
@@ -143,7 +144,7 @@ macro transform(exs...)
     names, queries = map(x -> x[1], queries), map(x -> x[2], queries)
     quote
         queries = TransformQuery.($(names),
-                                  [$(interpolate_underscores.(queries)...)])
+            [$(interpolate_underscores.(queries)...)])
 
         a -> transform(a, queries...)
     end
@@ -169,7 +170,7 @@ function transform(a::AbstractAlgebraicAgent, queries::Vararg{<:TransformQuery})
 end
 
 function transform(a::Vector{<:AbstractAlgebraicAgent},
-                   queries::Vararg{<:TransformQuery})
+    queries::Vararg{<:TransformQuery})
     results = []
     for a in a
         try
